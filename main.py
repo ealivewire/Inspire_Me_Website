@@ -3,10 +3,13 @@
 # OBJECTIVE: To implement a website which automates the retrieval and distribution of daily inspiration quotes.
 
 # Import necessary library(ies):
-import requests
+# import requests
+
 from data import app, db, mars_rovers, recognition, spreadsheet_attributes, API_KEY_ASTRONOMY_PIC_OF_THE_DAY, API_KEY_CLOSEST_APPROACH_ASTEROIDS, API_KEY_GET_LOC_FROM_LAT_AND_LON, API_KEY_MARS_ROVER_PHOTOS,  SENDER_EMAIL_GMAIL, SENDER_HOST, SENDER_PASSWORD_GMAIL, SENDER_PORT, URL_ASTRONOMY_PIC_OF_THE_DAY, URL_CLOSEST_APPROACH_ASTEROIDS, URL_CONFIRMED_PLANETS, URL_CONSTELLATION_ADD_DETAILS_1, URL_CONSTELLATION_ADD_DETAILS_2A, URL_CONSTELLATION_ADD_DETAILS_2B, URL_CONSTELLATION_MAP_SITE, URL_GET_LOC_FROM_LAT_AND_LON, URL_ISS_LOCATION, URL_MARS_ROVER_PHOTOS_BY_ROVER, URL_MARS_ROVER_PHOTOS_BY_ROVER_AND_OTHER_CRITERIA, URL_PEOPLE_IN_SPACE_NOW, URL_SPACE_NEWS, WEB_LOADING_TIME_ALLOWANCE
 from data import ApproachingAsteroids, ConfirmedPlanets, Constellations, MarsPhotoDetails, MarsPhotosAvailable, MarsRoverCameras, MarsRovers, SpaceNews, Users
 from data import AdminLoginForm, AdminUpdateForm, ContactForm, DisplayApproachingAsteroidsSheetForm, DisplayConfirmedPlanetsSheetForm, DisplayConstellationSheetForm, DisplayMarsPhotosSheetForm, ViewApproachingAsteroidsForm, ViewConfirmedPlanetsForm, ViewConstellationForm, ViewMarsPhotosForm
+
+from data import data_source
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask import Flask, abort, render_template, redirect, url_for, request
@@ -19,21 +22,21 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from sqlalchemy import Integer, String, Boolean, Float, DateTime, func, distinct
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from werkzeug.security import check_password_hash
+# from werkzeug.security import check_password_hash
 from wtforms import EmailField, SelectField, StringField, SubmitField, TextAreaField, BooleanField, PasswordField
 from wtforms.validators import InputRequired, Length, Email
 import collections  # Used for sorting items in the constellations dictionary
-import email_validator
+# import email_validator
 import glob
 import math
 import os
 import smtplib
 import time
 import traceback
-import unidecode
+# import unidecode
 import wx
 import wx.lib.agw.pybusyinfo as PBI
-import xlsxwriter
+# import xlsxwriter
 
 # Define variable to be used for showing user dialog and message boxes:
 dlg = wx.App()
@@ -1297,77 +1300,49 @@ def get_confirmed_planets():
 
 
 
-def get_inspiration_data():
-    """Function for getting all needed data pertaining to insp and store such information in the space database supporting our website"""
+def get_inspirational_data():
+    """Function for getting (via web-scraping) inspirational data and storing such information in the database supporting our website"""
 
     try:
-        # Obtain a list of constellation using the skyfield.api library:
-        constellations = dict(load_constellation_names())
-
-        # If a constellation list has been obtained:
-        if constellations != {}:
-            # Get the nickname for each constellation identified.  If the function called returns an empty directory,
-            # update system log and return failed-execution indication to the calling function:
-            constellations_data = get_constellation_data_nicknames(constellations)
-            if constellations_data == {}:
-                update_system_log("get_constellation_data", "Error: Data (nicknames) cannot be obtained at this time.")
-                return "Error: Data (nicknames) cannot be obtained at this time.", False
-
-            # Get additional details for each constellation identified.  If the function called returns an empty directory,
-            # update system log and return failed-execution indication to the calling function:
-            constellations_added_details = get_constellation_data_added_details(constellations)
-            if constellations_added_details == {}:
-                update_system_log("get_constellation_data",
-                                  "Error: Data (added details) cannot be obtained at this time.")
-                return "Error: Data (added details) cannot be obtained at this time.", False
-
-            # Get area for each constellation identified.  If the function called returns an empty directory,
-            # update system log and return failed-execution indication to the calling function:
-            constellations_area = get_constellation_data_area(constellations)
-            if constellations_area == {}:
-                update_system_log("get_constellation_data", "Error: Data (areas) cannot be obtained at this time.")
-                return "Error: Data (areas) cannot be obtained at this time.", False
-
-            # Add the additional details (including area) to the main constellation dictionary:
-            for key in constellations_data:
-                constellations_data[key]["area"] = constellations_area[key]["area"]
-                constellations_data[key]["myth_assoc"] = constellations_added_details[key]["myth_assoc"]
-                constellations_data[key]["first_appear"] = constellations_added_details[key]["first_appear"]
-                constellations_data[key]["brightest_star_name"] = constellations_added_details[key][
-                    "brightest_star_name"]
-                constellations_data[key]["brightest_star_url"] = constellations_added_details[key]["brightest_star_url"]
+        for i in range(0, len(data_source) + 1):
+            # Get the inspirational data from each identified data source.
+            # If the function called returns an empty directory,
+            inspirational_data = get_inspirational_data_details(i)
+            if inspirational_data == {}:
+                update_system_log("get_inspirational_data", f"Error: Data (for source = {data_source[i]["name"]}) cannot be obtained at this time.")
+                return f"Error: Data (for source = {data_source[i]["name"]}) cannot be obtained at this time.", False
 
             # Delete the existing records in the "constellations" database table and update same with the
             # contents of the "constellations_data" dictionary.  If the function called returns a failed-execution
             # indication, update system log and return failed-execution indication to the calling function:
-            if not update_database("update_constellations", constellations_data):
-                update_system_log("get_constellation_data",
-                                  "Error: Database could not be updated. Data cannot be obtained at this time.")
-                return "Error: Database could not be updated. Data cannot be obtained at this time.", False
+            # if not update_database("update_constellations", constellations_data):
+            #     update_system_log("get_constellation_data",
+            #                       "Error: Database could not be updated. Data cannot be obtained at this time.")
+            #     return "Error: Database could not be updated. Data cannot be obtained at this time.", False
 
-            # Retrieve all existing records in the "constellations" database table. If the function
-            # called returns an empty directory, update system log and return failed-execution indication to the
-            # calling function:
-            constellations_data = retrieve_from_database("constellations")
-            if constellations_data == {}:
-                update_system_log("get_constellation_data", "Error: Data cannot be obtained at this time.")
-                return "Error: Data cannot be obtained at this time.", False
-
-            # Create and format a spreadsheet file (workbook) to contain all constellation data. If the function called returns
-            # a failed-execution indication, update system log and return a failed-execution indication to the calling function:
-            if not export_data_to_spreadsheet_standard("constellations", constellations_data):
-                update_system_log("get_constellation_data",
-                                  "Error: Spreadsheet creation could not be completed at this time.")
-                return "Error: Spreadsheet creation could not be completed at this time.", False
+            # # Retrieve all existing records in the "constellations" database table. If the function
+            # # called returns an empty directory, update system log and return failed-execution indication to the
+            # # calling function:
+            # constellations_data = retrieve_from_database("constellations")
+            # if constellations_data == {}:
+            #     update_system_log("get_constellation_data", "Error: Data cannot be obtained at this time.")
+            #     return "Error: Data cannot be obtained at this time.", False
+            #
+            # # Create and format a spreadsheet file (workbook) to contain all constellation data. If the function called returns
+            # # a failed-execution indication, update system log and return a failed-execution indication to the calling function:
+            # if not export_data_to_spreadsheet_standard("constellations", constellations_data):
+            #     update_system_log("get_constellation_data",
+            #                       "Error: Spreadsheet creation could not be completed at this time.")
+            #     return "Error: Spreadsheet creation could not be completed at this time.", False
 
             # At this point, function is deemed to have executed successfully.  Update system log and return
             # successful-execution indication to the calling function:
-            update_system_log("get_constellation_data", "Successfully updated.")
+            update_system_log("get_inspirational_data", "Successfully updated.")
             return "", True
 
-        else:  # An error has occurred in processing constellation data.
-            update_system_log("get_constellation_data", "Error: Data cannot be obtained at this time.")
-            return "Error: Data cannot be obtained at this time.", False
+        # else:  # An error has occurred in processing constellation data.
+        #     update_system_log("get_constellation_data", "Error: Data cannot be obtained at this time.")
+        #     return "Error: Data cannot be obtained at this time.", False
 
     except:  # An error has occurred.
         update_system_log("get_constellation_data", traceback.format_exc())
@@ -1376,6 +1351,51 @@ def get_inspiration_data():
         return "An error has occurred. Data cannot be obtained at this time.", False
 
 
+def get_inspirational_data_details(source):
+    """Function for getting (via web-scraping) the nickname for each constellation identified"""
+
+    # Pause program execution to allow for website loading time:
+    time.sleep(WEB_LOADING_TIME_ALLOWANCE)
+
+    # Define a variable for storing the scraped inspirational data:
+    inspirational_data = []
+
+    try:
+        if source == 0:
+            # Initiate and configure a Selenium object to be used for scraping the website representing the
+            # inspiration-data source. If function failed, update system log and return failed-execution indication to the calling function:
+            driver = setup_selenium_driver(data_source[source]["url"], 1, 1)
+            if driver == None:
+                update_system_log("get_inspirational_data_details",
+                                  "Error: Selenium driver could not be created/configured.")
+                return {}
+
+            for i in range(1, data_source[source]["count"] + 1):
+                element_quote = find_element(driver, "xpath",'/html/body/div[4]/div[2]/main/article/div/blockquote[' + str(i) + ']/p')
+
+                # Add the quote to the "inspirational_data" list:
+                inspirational_data.append(element_quote.text)
+
+            print(f"List: {inspirational_data}")
+            print(f"Length: {len(inspirational_data)}")
+
+            # Close and delete the Selenium driver object:
+            driver.close()
+            del driver
+
+            # Return the populated "constellations_data" dictionary to the calling function:
+            return inspirational_data
+
+        elif source == 2:
+            pass
+        else:
+            pass
+
+    except:  # An error has occurred.
+        update_system_log("get_inspirational_data_details", traceback.format_exc())
+
+        # Return empty directory as a failed-execution indication to the calling function:
+        return {}
 
 
 def get_constellation_data():
@@ -2661,17 +2681,17 @@ def run_app():
         # Retrieve the secret key to be used for CSRF protection:
         app.secret_key = os.getenv("SECRET_KEY_FOR_CSRF_PROTECTION")
 
-        # Configure database tables.  If function failed, update system log and return
-        # failed-execution indication to the calling function::
-        if not config_database():
-            update_system_log("run_app", "Error: Database configuration failed.")
-            return False
-
-        # Configure web forms.  If function failed, update system log and return
-        # failed-execution indication to the calling function::
-        if not config_web_forms():
-            update_system_log("run_app", "Error: Web forms configuration failed.")
-            return False
+        # # Configure database tables.  If function failed, update system log and return
+        # # failed-execution indication to the calling function::
+        # if not config_database():
+        #     update_system_log("run_app", "Error: Database configuration failed.")
+        #     return False
+        #
+        # # Configure web forms.  If function failed, update system log and return
+        # # failed-execution indication to the calling function::
+        # if not config_web_forms():
+        #     update_system_log("run_app", "Error: Web forms configuration failed.")
+        #     return False
 
     except:  # An error has occurred.
         update_system_log("run_app", traceback.format_exc())
@@ -2895,6 +2915,7 @@ def update_system_log(activity, log):
 
 # Run main function for this application:
 run_app()
+get_inspirational_data()
 
 # Destroy the object that was created to show user dialog and message boxes:
 dlg.Destroy()
