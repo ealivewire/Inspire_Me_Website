@@ -17,7 +17,6 @@ from functools import wraps  # Used in 'admin_only" decorator function
 from flask_wtf import FlaskForm
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from skyfield.api import load_constellation_names
 from sqlalchemy import Integer, String, Boolean, Float, DateTime, func, distinct
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from werkzeug.security import check_password_hash
@@ -1297,13 +1296,92 @@ def get_confirmed_planets():
         return "An error has occurred. Data cannot be obtained at this time.", False
 
 
-def get_constellation_data():
-    """Function for getting all needed data pertaining to constellations and store such information in the space database supporting our website"""
+
+def get_inspiration_data():
+    """Function for getting all needed data pertaining to insp and store such information in the space database supporting our website"""
 
     try:
         # Obtain a list of constellation using the skyfield.api library:
         constellations = dict(load_constellation_names())
 
+        # If a constellation list has been obtained:
+        if constellations != {}:
+            # Get the nickname for each constellation identified.  If the function called returns an empty directory,
+            # update system log and return failed-execution indication to the calling function:
+            constellations_data = get_constellation_data_nicknames(constellations)
+            if constellations_data == {}:
+                update_system_log("get_constellation_data", "Error: Data (nicknames) cannot be obtained at this time.")
+                return "Error: Data (nicknames) cannot be obtained at this time.", False
+
+            # Get additional details for each constellation identified.  If the function called returns an empty directory,
+            # update system log and return failed-execution indication to the calling function:
+            constellations_added_details = get_constellation_data_added_details(constellations)
+            if constellations_added_details == {}:
+                update_system_log("get_constellation_data",
+                                  "Error: Data (added details) cannot be obtained at this time.")
+                return "Error: Data (added details) cannot be obtained at this time.", False
+
+            # Get area for each constellation identified.  If the function called returns an empty directory,
+            # update system log and return failed-execution indication to the calling function:
+            constellations_area = get_constellation_data_area(constellations)
+            if constellations_area == {}:
+                update_system_log("get_constellation_data", "Error: Data (areas) cannot be obtained at this time.")
+                return "Error: Data (areas) cannot be obtained at this time.", False
+
+            # Add the additional details (including area) to the main constellation dictionary:
+            for key in constellations_data:
+                constellations_data[key]["area"] = constellations_area[key]["area"]
+                constellations_data[key]["myth_assoc"] = constellations_added_details[key]["myth_assoc"]
+                constellations_data[key]["first_appear"] = constellations_added_details[key]["first_appear"]
+                constellations_data[key]["brightest_star_name"] = constellations_added_details[key][
+                    "brightest_star_name"]
+                constellations_data[key]["brightest_star_url"] = constellations_added_details[key]["brightest_star_url"]
+
+            # Delete the existing records in the "constellations" database table and update same with the
+            # contents of the "constellations_data" dictionary.  If the function called returns a failed-execution
+            # indication, update system log and return failed-execution indication to the calling function:
+            if not update_database("update_constellations", constellations_data):
+                update_system_log("get_constellation_data",
+                                  "Error: Database could not be updated. Data cannot be obtained at this time.")
+                return "Error: Database could not be updated. Data cannot be obtained at this time.", False
+
+            # Retrieve all existing records in the "constellations" database table. If the function
+            # called returns an empty directory, update system log and return failed-execution indication to the
+            # calling function:
+            constellations_data = retrieve_from_database("constellations")
+            if constellations_data == {}:
+                update_system_log("get_constellation_data", "Error: Data cannot be obtained at this time.")
+                return "Error: Data cannot be obtained at this time.", False
+
+            # Create and format a spreadsheet file (workbook) to contain all constellation data. If the function called returns
+            # a failed-execution indication, update system log and return a failed-execution indication to the calling function:
+            if not export_data_to_spreadsheet_standard("constellations", constellations_data):
+                update_system_log("get_constellation_data",
+                                  "Error: Spreadsheet creation could not be completed at this time.")
+                return "Error: Spreadsheet creation could not be completed at this time.", False
+
+            # At this point, function is deemed to have executed successfully.  Update system log and return
+            # successful-execution indication to the calling function:
+            update_system_log("get_constellation_data", "Successfully updated.")
+            return "", True
+
+        else:  # An error has occurred in processing constellation data.
+            update_system_log("get_constellation_data", "Error: Data cannot be obtained at this time.")
+            return "Error: Data cannot be obtained at this time.", False
+
+    except:  # An error has occurred.
+        update_system_log("get_constellation_data", traceback.format_exc())
+
+        # Return failed-execution indication to the calling function:
+        return "An error has occurred. Data cannot be obtained at this time.", False
+
+
+
+
+def get_constellation_data():
+    """Function for getting (via web-scraping) inspirational data and storing such information in the database supporting our website"""
+
+    try:
         # If a constellation list has been obtained:
         if constellations != {}:
             # Get the nickname for each constellation identified.  If the function called returns an empty directory,
