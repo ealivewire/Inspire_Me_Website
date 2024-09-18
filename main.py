@@ -977,33 +977,14 @@ def get_inspirational_data_details(source, count, name, url):
         # Pause program execution to allow for website loading time:
         time.sleep(WEB_LOADING_TIME_ALLOWANCE)
 
-        if source == 1:
+        if source == 1 or source == 2 or source == 3 or source == 13 or source == 21 or source == 22 or source == 24:
             for i in range(1, count + 20):
                 try:
                     element_quote = find_element(driver, "xpath",'/html/body/div[4]/div[2]/main/article/div/blockquote[' + str(i) + ']/p')
 
                     # Add the quote to the "inspirational_data" list:
                     inspirational_data.append(element_quote.text)
-                except:
-                    continue
 
-        elif source == 2:
-            for i in range(1, count + 20):
-                try:
-                    element_quote = find_element(driver, "xpath", '/html/body/div[4]/div[2]/main/article/div/blockquote[' + str(i) + ']/p')
-
-                    # Add the quote to the "inspirational_data" list:
-                    inspirational_data.append(element_quote.text)
-                except:
-                    continue
-
-        elif source == 3:
-            for i in range(1, count + 20):
-                try:
-                    element_quote = find_element(driver, "xpath", '/html/body/div[4]/div[2]/main/article/div/blockquote[' + str(i) + ']/p')
-
-                    # Add the quote to the "inspirational_data" list:
-                    inspirational_data.append(element_quote.text)
                 except:
                     continue
 
@@ -1184,7 +1165,6 @@ def get_inspirational_data_details(source, count, name, url):
                         except:
                             continue
 
-
         elif source == 8:
             for i in range(1, count + 20):
                 try:
@@ -1294,17 +1274,6 @@ def get_inspirational_data_details(source, count, name, url):
                 except:
                     continue
 
-        elif source == 13:
-            for i in range(1, count + 20):
-                try:
-                    element_quote = find_element(driver, "xpath",'/html/body/div[4]/div[2]/main/article/div/blockquote[' + str(i) + ']/p')
-
-                    # Add the quote to the "inspirational_data" list:
-                    inspirational_data.append(element_quote.text)
-
-                except:
-                    continue
-
         elif source == 14:
             for i in range(7, count + 28):
                 try:
@@ -1382,7 +1351,159 @@ def get_inspirational_data_details(source, count, name, url):
                     except:
                         continue
 
+        elif source == 15:
+            for i in range(1, count + 20):
+                try:
+                    element_quote = find_element(driver, "xpath",
+                                                 '/html/body/main/article/div[3]/blockquote[' + str(i) + ']/p')
 
+                    # Add the quote to the "inspirational_data" list:
+                    inspirational_data.append(element_quote.text)
+
+                except:
+                    continue
+
+        elif source == 16 or source == 17 or source == 18:
+            for i in range(1, count + 20):
+                try:
+                    element_quote = find_element(driver, "xpath",
+                                                 '/html/body/div[1]/div/div/div[1]/main/article/div/div/div/div/p[' + str(i) + ']')
+
+                    # Strip unwanted characters:
+                    idx1 = element_quote.text.find(".")
+                    res = element_quote.text[0: idx1 + len(".")]
+                    element_quote_1 = element_quote.text.replace(res, "")
+                    element_quote_2 = element_quote_1.strip()
+
+                    if element_quote_2[0] == '“':
+                        element_quote_3 = element_quote_2.replace('“', "")
+                        element_quote_4 = element_quote_3.replace('”', "")
+                        # print(element_quote_4)
+
+                        # Add the quote to the "inspirational_data" list:
+                        inspirational_data.append(element_quote_4)
+
+                except:
+                    continue
+
+        elif source == 19 or source == 20 or source == 25:
+            for i in range(1, count + 20):
+                try:
+                    element_quote = find_element(driver, "xpath",
+                                                 '/html/body/div[1]/div/div/div/main/div/div/div/div/div[2]/div/div[2]/p[' + str(i) + ']')
+
+                    # Strip unwanted characters:
+                    element_quote_1 = element_quote.text.replace("‘", "")
+                    element_quote_2 = element_quote_1.replace("’", "")
+
+                    # Add the quote to the "inspirational_data" list:
+                    inspirational_data.append(element_quote_2)
+
+                except:
+                    continue
+
+        elif source == 23:
+            for i in range(1, count + 20):
+                try:
+                    element_quote = find_element(driver, "xpath",
+                                                 '/html/body/div[1]/div/main/div/section/article/div[2]/p[' + str(i) + ']')
+
+                    element_quote_1 = html2text.html2text(element_quote.get_attribute("outerHTML"))
+
+                    if '“' in element_quote_1 and not ("Rufus" in element_quote_1):
+                        # Strip unwanted characters:
+                        element_quote_2 = element_quote_1.replace("\n", " ")
+                        element_quote_3 = element_quote_2.replace('“', "")
+                        element_quote_4 = element_quote_3.replace('"', "")
+                        element_quote_5 = element_quote_4.replace('”', "")
+
+                        # Add the quote to the "inspirational_data" list:
+                        inspirational_data.append(element_quote_5.strip() + " - Gaius Musonius Rufus")
+
+                except:
+                    continue
+
+        elif source == 26:
+            for i in range(1, count + 20):
+                try:
+                    element_quote = find_element(driver, "xpath", '/html/body/div[1]/main/div[3]/div[1]/div[1]/div[1]/p[' + str(i) + ']')
+
+                    element_quote_1a = element_quote.get_attribute("outerHTML")
+
+                    # initializing substrings
+                    sub1 = "</em>"
+                    sub2 = "</p>"
+
+                    # getting index of substrings
+                    idx1 = element_quote_1a.find(sub1)
+                    idx2 = element_quote_1a.find(sub2)
+
+                    # length of substring 1 is added to
+                    # get string from next character
+                    res = element_quote_1a[idx1 + len(sub1): idx2 + len(sub2) + 1]
+
+                    if res == "":
+                        break
+                    else:
+                        element_quote_1b = element_quote_1a.replace(res, "")
+
+                    element_quote_1c = html2text.html2text(element_quote_1b)
+
+                    # print(f"{'\n' in element_quote.get_attribute('outerHTML')}: {element_quote.get_attribute('outerHTML')}")
+
+                    element_quote_2 = element_quote_1c.replace("_", "")
+                    element_quote_3 = element_quote_2.replace("\n", " ")
+                    # element_quote_4 = element_quote_3.replace("[", "")
+                    # element_quote_5 = element_quote_4.replace("]", "")
+                    element_quote_4 = element_quote_3.replace('“', "")
+                    element_quote_5 = element_quote_4.replace('”', "")
+
+                    if not ('\\.' in element_quote_5):
+                        continue
+
+                    # initializing substrings
+                    sub1 = "\\."
+
+                    # getting index of substrings
+                    idx1 = element_quote_5.find(sub1)
+
+                    # length of substring 1 is added to
+                    # get string from next character
+                    res = element_quote_5[0:+ idx1 + len(sub1) + 1]
+
+                    if res == "":
+                        break
+                    else:
+                        element_quote_6 = element_quote_5.replace(res, "")
+
+                    if "(" in element_quote_6 or ")" in element_quote_6:
+                        # initializing substrings
+                        sub1 = "("
+                        sub2 = ")"
+
+                        # getting index of substrings
+                        idx1 = element_quote_6.find(sub1)
+                        idx2 = element_quote_6.find(sub2)
+
+                        # length of substring 1 is added to
+                        # get string from next character
+                        res = element_quote_6[idx1 + len(sub1): idx2]
+
+                        if res == "":
+                            break
+                        else:
+                            element_quote_7 = element_quote_6.replace(res, "")
+                            element_quote_8 = element_quote_7.replace("()", "")
+                    else:
+                        element_quote_8 = element_quote_6
+
+                    # print(element_quote_8.strip())
+
+                    # Add the quote to the "inspirational_data" list:
+                    inspirational_data.append(element_quote_8.strip())
+
+                except:
+                    continue
 
         else:
             pass
