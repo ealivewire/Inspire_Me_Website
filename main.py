@@ -1919,6 +1919,9 @@ def update_system_log(activity, log):
         dlg = None
 
 
+def select_random_quotes():
+    pass
+
 # Run main function for this application:
 run_app()
 
