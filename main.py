@@ -612,7 +612,7 @@ def config_database():
             data_source_id: Mapped[int] = mapped_column(ForeignKey("inspiration_data_sources.id"))
             parent: Mapped["InspirationDataSources"] = relationship(back_populates="children")
 
-        class Subscribers(UserMixin, db.Model):
+        class Subscribers(db.Model):
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
             name: Mapped[str] = mapped_column(String(50), nullable=False)
             email: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -897,7 +897,7 @@ def get_inspirational_data():
     """Function for getting (via web-scraping) inspirational data and storing such information in the database supporting our website"""
 
     try:
-        data_sources_to_update = retrieve_from_database(trans_type="non-static_data_sources")
+        data_sources_to_update = retrieve_from_database(trans_type="get_non-static_data_sources")
         print(len(data_sources_to_update))
         if data_sources_to_update == {}:
             error_msg = "Error: Data could not be obtained at this time."
@@ -1565,9 +1565,28 @@ def retrieve_from_database(trans_type, **kwargs):
     """Function to retrieve data from this application's database based on the type of transaction"""
     try:
         with app.app_context():
-            if trans_type == "non-static_data_sources":
+            if trans_type == "get_categories":
+                # Retrieve and return all records from the "categories" database table:
+                return db.session.execute(db.select(Categories).order_by(Categories.id)).scalars().all()
+
+            elif trans_type == "get_quotes_for_category":
+                # Capture optional argument:
+                category_id = kwargs.get("category_id", None)
+
+                # Retrieve and return all records in the "inspirational_quotes" database table where the data_source_id is
+                # associated with the category ID passed to this function.  Use an inner join between the
+                # "inspirational_quotes" and "inspiration_data_sources" database tables:
+                dataset_join = db.session.query(InspirationalQuotes, InspirationDataSources).join(InspirationDataSources, InspirationalQuotes.data_source_id == InspirationDataSources.id).filter(InspirationDataSources.category_id == category_id).all()
+
+                # Retrieve and return all records in the join where the category ID matches the ID passed to this function:
+                return dataset_join
+
+            elif trans_type == "get_non-static_data_sources":
                 # Retrieve and return all existing records, sorted by ID #, from the "inspiration_data_sources" database table, where the static :
                 return db.session.execute(db.select(InspirationDataSources).where(InspirationDataSources.static == 0).order_by(InspirationDataSources.id)).scalars().all()
+
+            elif trans_type == "get_subscribers":
+                return db.session.execute(db.select(Subscribers).order_by(Subscribers.name)).scalars().all()
 
             elif trans_type == "confirmed_planets":
                 # Retrieve and return all existing records, sorted by host and planet names. from the "confirmed_planets" database table:
