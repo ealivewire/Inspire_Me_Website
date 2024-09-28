@@ -87,17 +87,18 @@ def admin_only(f):
 # Configure route for home page:
 @app.route('/')
 def home():
-    global db, app, dlg
+    global db, app
 
     try:
         # Go to the home page:
         return render_template("index.html", logged_in=current_user.is_authenticated, recognition_web_template=recognition["web_template"])
 
     except:
-        dlg = wx.MessageBox(f"Error (route: '/'): {traceback.format_exc()}", 'Error', wx.OK | wx.ICON_INFORMATION)
+        # Log error into system log file:
         update_system_log("route: '/'", traceback.format_exc())
-        dlg = None
 
+        # Go to the web page which displays error details to the user:
+        return render_template("error.html", activity="route: '/'", details=traceback.format_exc())
 
 # Configure route for "About" web page:
 @app.route('/about')
@@ -107,10 +108,13 @@ def about():
     try:
         # Go to the "About" page:
         return render_template("about.html", recognition_web_template=recognition["web_template"])
+
     except:
-        dlg = wx.MessageBox(f"Error (route: '/about'): {traceback.format_exc()}", 'Error', wx.OK | wx.ICON_INFORMATION)
+        # Log error into system log:
         update_system_log("route: '/about'", traceback.format_exc())
-        dlg = None
+
+        # Go to the web page which displays error details to the user:
+        return render_template("error.html", activity="route: '/about'", details=traceback.format_exc())
 
 
 # Configure route for "Administrative Update Login" web page:
@@ -154,9 +158,11 @@ def admin_login():
         return render_template("admin_login.html", form=form, msg_status="<<Message Being Drafted.>>", recognition_web_template=recognition["web_template"])
 
     except:  # An error has occurred.
-        dlg = wx.MessageBox(f"Error (route: '/admin_login'): {traceback.format_exc()}", 'Error', wx.OK | wx.ICON_INFORMATION)
+        # Log error into system log:
         update_system_log("route: '/admin_login'", traceback.format_exc())
-        dlg = None
+
+        # Go to the web page which displays error details to the user:
+        return render_template("error.html", activity="route: '/admin_login'", details=traceback.format_exc())
 
 
 # Configure route for logging out of "Administrative Update":
@@ -170,9 +176,11 @@ def admin_logout():
         return redirect(url_for('home'))
 
     except:  # An error has occurred.
-        dlg = wx.MessageBox(f"Error (route: '/admin_logout'): {traceback.format_exc()}", 'Error', wx.OK | wx.ICON_INFORMATION)
+        # Log error into system log:
         update_system_log("route: '/admin_logout'", traceback.format_exc())
-        dlg = None
+
+        # Go to the web page which displays error details to the user:
+        return render_template("error.html", activity="route: '/admin_logout'", details=traceback.format_exc())
 
 
 # Configure route for "Administrative Update" web page:
@@ -264,9 +272,11 @@ def admin_update():
         return render_template("admin_update.html", form=form, update_status="<<Update Choices to be Made.>>", recognition_web_template=recognition["web_template"])
 
     except:  # An error has occurred.
-        dlg = wx.MessageBox(f"Error (route: '/admin_update'): {traceback.format_exc()}", 'Error', wx.OK | wx.ICON_INFORMATION)
+        # Log error into system log:
         update_system_log("route: '/admin_update'", traceback.format_exc())
-        dlg = None
+
+        # Go to the web page which displays error details to the user:
+        return render_template("error.html", activity="route: '/admin_update'", details=traceback.format_exc())
 
 
 # # Configure route for "Approaching Asteroids" web page:
@@ -452,9 +462,12 @@ def contact():
         return render_template("contact.html", form=form, msg_status="<<Message Being Drafted.>>", recognition_web_template=recognition["web_template"])
 
     except:  # An error has occurred.
-        dlg = wx.MessageBox(f"Error (route: '/contact'): {traceback.format_exc()}", 'Error', wx.OK | wx.ICON_INFORMATION)
+        # Log error into system log:
         update_system_log("route: '/contact'", traceback.format_exc())
-        dlg = None
+
+        # Go to the web page which displays error details to the user:
+        return render_template("error.html", activity="route: '/contact'", details=traceback.format_exc())
+
 
 
 # # Configure route for "Photos from Mars" web page:

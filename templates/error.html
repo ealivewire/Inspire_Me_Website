@@ -1,0 +1,36 @@
+{% include "header.html" %}
+
+<!-- Page Header-->
+<header
+  class="masthead"
+  style="background-image: url('../static/assets/img/error.jpg')">
+
+  <div class="container position-relative px-4 px-lg-5">
+    <div class="row gx-4 gx-lg-5 justify-content-center">
+      <div class="col-md-10 col-lg-8 col-xl-7">
+        <div class="site-heading">
+          <h1>Inspire Me!</h1>
+          <span class="subheading">Error</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="col-lg-8 mx-auto p-4 py-md-5">
+  <main>
+    <h3 style="width: 80%; margin-left:auto; margin-right:auto; text-align:center; color:red">Error:</h3>
+    <p style="width: 80%; margin-left:auto; margin-right:auto; text-align:center; color:red">Activity: {{ activity }}</p>
+    <p style="width: 80%; margin-left:auto; margin-right:auto; text-align:center; color:red">Details: {{ details }}</p>
+    <h5><form>
+       <button style="display: block; margin: auto; background-color:red; color:white; font-weight:bold" type="submit" formaction="{{url_for('home')}}">Return to Home Page</button>
+    </form></h5>
+  </main>
+  <footer class="pt-5 my-5 text-body-secondary border-top">
+    <p>{{ recognition_web_template }}</p>
+  </footer>
+</div>
+  <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body></html>
+
+
