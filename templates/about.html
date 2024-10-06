@@ -1,0 +1,64 @@
+{% include "header.html" %}
+
+<!-- Page Header-->
+<header
+  class="masthead"
+    style="background-image: url('../static/assets/img/about.png')">
+
+  <div class="container position-relative px-4 px-lg-5">
+    <div class="row gx-4 gx-lg-5 justify-content-center">
+      <div class="col-md-10 col-lg-8 col-xl-7">
+        <div class="site-heading">
+          <h1>About<br>Inspire Me!</h1>
+          <span class="subheading">A summary of technologies used to implement this website</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="col-lg-8 mx-auto p-4 py-md-5">
+  <main>
+      <table style="width: 80%; margin-left:auto; margin-right:auto">
+        <colgroup>
+          <col span="1" style="width: 50%;">
+          <col span="1" style="width: 50%;">
+        </colgroup>
+        <tr style="vertical-align: top; border-bottom: 1pt solid black; font-size: 14pt; font-weight:bold">
+            <th><h5 style="font-weight:bold">Technologies</h5></th>
+            <th><h5 style="font-weight:bold">Links</h5></th>
+        </tr>
+        <tr>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal">Python as the main application platform</h5></td>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal"><a href="https://www.python.org/" rel="noopener">Python</a></h5></td>
+        </tr>
+        <tr>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal">HTML and CSS (with Bootstrap) for website design</h5></td>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal"><a href="https://www.w3schools.com/html/" rel="noopener">HTML,</a><a href="https://www.w3schools.com/css/" rel="noopener">CSS, </a><a href="https://getbootstrap.com/" rel="noopener">Bootstrap</a></h5></td>
+        </tr>
+        <tr>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal">Jinja for processing Python code inside of HTML</h5></td>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal"><a href="https://jinja.palletsprojects.com/" rel="noopener">Jinja</a></h5></td>
+        </tr>
+        <tr>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal">Flask for website deployment</h5></td>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal"><a href="https://flask.palletsprojects.com/" rel="noopener">Flask</a></h5></td>
+        </tr>
+        <tr>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal">Selenium WebDriver for web scraping / automation</h5></td>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal"><a href="https://www.selenium.dev/documentation/webdriver/" rel="noopener">Selenium WebDriver</a></h5></td>
+        </tr>
+        <tr>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal">SQLite and SQLAlchemy for database support</h5></td>
+            <td style="vertical-align: top; border-bottom: 1pt solid black"><h5 style="font-weight:normal"><a href="https://www.sqlite.org/" rel="noopener">SQLite, </a><a href="https://www.sqlalchemy.org/" rel="noopener">SQLAlchemy</a></h5></td>
+        </tr>
+      </table>
+    </main>
+  <footer class="pt-5 my-5 text-body-secondary border-top">
+      <p style="text-align:center">{{ recognition_web_template }}</p>
+  </footer>
+</div>
+  <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body></html>
+
+

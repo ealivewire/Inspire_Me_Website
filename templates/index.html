@@ -1,4 +1,5 @@
 {% include "header.html" %}
+{% from 'bootstrap5/form.html' import render_form %} <!-- INTRODUCES BOOTSTRAP-FLASK TO THE MIX -->
 
 <!-- Page Header-->
 <header
@@ -19,13 +20,19 @@
 
 <div class="col-lg-8 mx-auto p-4 py-md-5">
   <main>
-    <h3 style="width: 80%; margin-left:auto; margin-right:auto">Inspirational and motivational quotes are ready to uplift you!<br>Join our mailing list for daily motivation!</h3><br>
-
-
+    <h3 style="width: 80%; margin-left:auto; margin-right:auto;text-align:center">Inspirational and motivational quotes are ready to uplift you!<br>Join our mailing list for daily motivation!</h3><br>
+    {% if form %}
+      <h3 style="text-align: center;font-weight:bold;color:green" >Please subscribe below to our mailing list for inspirational quotes:</h3>
+      <br>
+      <h3 style="width: 80%; margin-left:auto; margin-right:auto;text-align:center; color:green">{{ render_form(form) }}</h3>
+    {% endif %}
+    {% if result %}
+      <h4 style="width: 80%; margin-left:auto; margin-right:auto;text-align:center; color:green">{{ result }}</h4>
+    {% endif %}
   </main>
   <footer class="pt-5 my-5 text-body-secondary border-top">
-    <p>{{ recognition_web_template }}</p>
-    <p>Wallpaper by Chad on WallpaperSafari</p>
+    <p style="text-align:center">{{ recognition_web_template }}</p>
+    <p style="text-align:center">Wallpaper by Chad on WallpaperSafari</p>
   </footer>
 </div>
   <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>

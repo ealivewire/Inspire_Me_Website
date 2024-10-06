@@ -1,0 +1,58 @@
+{% include "header.html" %}
+
+<!-- Page Header-->
+<header
+  class="masthead"
+  style="background-image: url('../static/assets/img/thanks.jpg')">
+
+  <div class="container position-relative px-4 px-lg-5">
+    <div class="row gx-4 gx-lg-5 justify-content-center">
+      <div class="col-md-10 col-lg-8 col-xl-7">
+        <div class="site-heading">
+          <h1>Inspire Me!</h1>
+          <span class="subheading">Credits</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="col-lg-8 mx-auto p-4 py-md-5">
+  <main>
+    {% if success %}
+      <h3 style="width: 100%; margin-left:auto; margin-right:auto;text-align:center">Thank you to each and every one of the following {{ credit_count }} sources for our data pool of {{ quote_count }} inspirational quotes!</h3><br>
+      <table style="width: 80%; margin-left:auto; margin-right:auto">
+        <colgroup>
+            <col span="1" style="width: 5%;">
+            <col span="1" style="width: 25%;">
+            <col span="1" style="width: 35%;">
+            <col span="1" style="width: 35%;">
+        </colgroup>
+        <tr>
+          <th style="font-size: 1rem"></th>
+          <th style="font-size: 1rem">Category</th>
+          <th style="font-size: 1rem">Name</th>
+          <th style="font-size: 1rem">Recognition</th>
+        </tr>
+        {% for credit in credits %}
+            <tr>
+              <td style="font-size: 1rem"><img src="{{ url_for('static', filename='assets/favicon.ico') }}" width="30rem" height="30rem"></td>
+              <td style="font-size: 1rem">{{ credit.Categories.category }}</td>
+              <td style="font-size: 1rem">{{ credit.InspirationDataSources.name }}</td>
+              <td style="font-size: 1rem">{{ credit.InspirationDataSources.recognition }}</td>
+            </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+        <p style="text-align:center">{{error_msg}}</p>
+    {% endif %}
+  </main>
+  <footer class="pt-5 my-5 text-body-secondary border-top">
+    <p style="text-align:center">{{ recognition_web_template }}</p>
+  </footer>
+</div>
+  <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>
+
+

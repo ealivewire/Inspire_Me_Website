@@ -1,0 +1,61 @@
+{% include "header.html" %}
+
+<!-- Page Header-->
+<header
+  class="masthead"
+  style="background-image: url('../static/assets/img/admin_update.png')">
+
+  <div class="container position-relative px-4 px-lg-5">
+    <div class="row gx-4 gx-lg-5 justify-content-center">
+      <div class="col-md-10 col-lg-8 col-xl-7">
+        <div class="site-heading">
+          <h1>Inspire Me!</h1>
+          <span class="subheading">Delete Subscriber (Confirm Deletion)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="col-lg-8 mx-auto p-4 py-md-5">
+  <h2 style="text-align: center;">Subscriber Name: {{ subscriber.name }}</h2><br>
+  <main>
+    {% if success %}
+        <table style="width: 50%; margin-left:auto; margin-right:auto">
+          <colgroup>
+              <col span="1" style="width: 50%;">
+              <col span="1" style="width: 50%;">
+          </colgroup>
+              <tr>
+                <td></td>
+                <td style="font-size: 0rem">{{ subscriber.id }}</td>
+              </tr>
+              <tr>
+                <td style="font-size: 1rem"><b>Name:</b></td>
+                <td style="font-size: 1rem">{{ subscriber.name }}</td>
+              </tr>
+              <tr>
+                <td style="font-size: 1rem"><b>E-mail address:</b></td>
+                <td style="font-size: 1rem">{{ subscriber.email }}</td>
+              </tr>
+        </table>
+    {% else %}
+        <p style="text-align:center">{{error_msg}}</p>
+    {% endif %}
+    <br>
+    <h5><form>
+         <button style="display: block; margin: auto; background-color:red; color:white; font-weight:bold" type="submit" formaction="{{url_for('delete_subscriber_result',subscriber_id=subscriber.id)}}"><img src="{{ url_for('static', filename='assets/favicon.ico') }}" width="30rem" height="30rem"> Delete This Subscriber</button>
+    </form></h5>
+    <h5><form>
+         <button style="display: block; margin: auto; background-color:red; color:white; font-weight:bold" type="submit" formaction="{{url_for('subscribers')}}"><img src="{{ url_for('static', filename='assets/favicon.ico') }}" width="30rem" height="30rem"> Cancel and Return to Existing Subscribers Page</button>
+    </form></h5>
+  </main>
+  <footer class="pt-5 my-5 text-body-secondary border-top" style="text-align:center">
+    <p>{{ recognition_web_template }}</p>
+  </footer>
+</div>
+  <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>
+
+
