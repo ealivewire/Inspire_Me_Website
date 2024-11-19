@@ -18,11 +18,27 @@
   </div>
 </header>
 
-<div class="col-lg-8 mx-auto p-4 py-md-5">
+<div class="col-lg-8 mx-auto p-4 py-md-5" style="text-align:center">
   <main>
-  <h5><form>
-     <button style="display: block; margin: auto; background-color:red; color:white; font-weight:bold" type="submit" formaction="{{url_for('subscribers')}}"><img src="{{ url_for('static', filename='assets/favicon.ico') }}" width="30rem" height="30rem"> Subscribers</button>
-  </form></h5>
+      {% if result %}
+        <p>{{ result }}</p>
+        <h5><form>
+            <button style="display: block; margin: auto; background-color:red; color:white; font-weight:bold" type="submit" formaction="{{url_for('admin_update')}}"><img src="{{ url_for('static', filename='assets/favicon.ico') }}" width="30rem" height="30rem"> Return to Administrative Update Page</button>
+        </form></h5>
+      {% else %}
+          <h5 style="text-align: center;font-weight:bold" >Administrative Functions:</h5>
+          <table style="width: 20%; margin-left:auto; margin-right:auto; text-align:left">
+            <colgroup>
+                <col span="1" style="width: 100%;">
+            </colgroup>
+                <tr>
+                  <td style="font-size: 1rem"><a style="text-align:left" href="{{ url_for('update_inspirational_data') }}"><img src="{{ url_for('static', filename='assets/favicon.ico') }}" style="height:40px;width:40px"> Update Inspirational Data</a></td>
+                </tr>
+                <tr>
+                  <td style="font-size: 1rem"><a style="text-align:left" href="{{ url_for('subscribers') }}"><img src="{{ url_for('static', filename='assets/favicon.ico') }}" style="height:40px;width:40px"> Maintain Subscribers</a></td>
+                </tr>
+          </table>
+      {% endif %}
   </main>
   <footer class="pt-5 my-5 text-body-secondary border-top" style="text-align:center">
     <p>{{ recognition_web_template }}</p>

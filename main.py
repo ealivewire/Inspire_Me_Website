@@ -1,36 +1,38 @@
-# PROFESSIONAL PROJECT: Inspire Me Website
+# PROFESSIONAL PROJECT: Inspire Me! Website
 
-# OBJECTIVE: To implement a website which automates the retrieval and distribution of daily inspiration quotes.
+# OBJECTIVE: To implement a website which automates the retrieval and distribution of inspiration quotes
+#            (can be on a periodic basis if scheduled via web host).
 
 # Import necessary library(ies):
 from data import app, db, recognition, SENDER_EMAIL_GMAIL, SENDER_HOST, SENDER_PASSWORD_GMAIL, SENDER_PORT, WEB_LOADING_TIME_ALLOWANCE
 from data import Categories, InspirationDataSources, InspirationalQuotes, Subscribers, Users
-from data import AddOrEditSubscriberForm, AdminUpdateForm, ContactForm
-from data import data_source
-from datetime import datetime, timedelta
+from data import AddOrEditSubscriberForm, AdminLoginForm, AdminUpdateForm, ContactForm
+from datetime import datetime
 from dotenv import load_dotenv
+import email_validator
 from flask import Flask, abort, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap5
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from functools import wraps  # Used in 'admin_only" decorator function
 from flask_wtf import FlaskForm
+import html2text
+import os
+import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+import smtplib
 from sqlalchemy import Integer, String, Boolean, ForeignKey, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from typing import List
-from werkzeug.security import check_password_hash
-from wtforms import EmailField, StringField, SubmitField, TextAreaField, BooleanField, PasswordField
-from wtforms.validators import InputRequired, Length, Email
-import email_validator
-import os
-import smtplib
 import time
 import traceback
+from typing import List
+from werkzeug.security import check_password_hash
+from wtforms import BooleanField, EmailField, PasswordField, StringField, SubmitField, TextAreaField
+from wtforms.validators import InputRequired, Length, Email
 import wx
 import wx.lib.agw.pybusyinfo as PBI
-import html2text
+
 
 # Define variable to be used for showing user dialog and message boxes:
 dlg = wx.App()
@@ -77,8 +79,6 @@ def admin_only(f):
 # Configure route for home page:
 @app.route('/',methods=["GET", "POST"])
 def home():
-    global db, app
-
     try:
         # Instantiate an instance of the "AddOrEditSubscriberForm" class:
         form = AddOrEditSubscriberForm()
@@ -113,11 +113,10 @@ def home():
         # Go to the web page which displays error details to the user:
         return render_template("error.html", activity="route: '/'", details=traceback.format_exc())
 
+
 # Configure route for "About" web page:
 @app.route('/about')
 def about():
-    global db, app
-
     try:
         # Go to the "About" page:
         return render_template("about.html", recognition_web_template=recognition["web_template"])
@@ -167,14 +166,12 @@ def add_subscriber():
         update_system_log("route: '/add_subscriber'", traceback.format_exc())
 
         # Go to the web page which displays error details to the user:
-        return render_template("error.html", activity="route: '/add_cafe'", details=traceback.format_exc())
+        return render_template("error.html", activity="route: '/add_subscriber'", details=traceback.format_exc())
 
 
 # Configure route for "Administrative Update Login" web page:
 @app.route('/admin_login',methods=["GET", "POST"])
 def admin_login():
-    global db, app
-
     try:
         # Instantiate an instance of the "AdminLoginForm" class:
         form = AdminLoginForm()
@@ -388,7 +385,7 @@ def edit_subscriber(subscriber_id):
             # Initialize variable to track whether subscriber e-mail address has violated the unique-value constraint:
             unique_subscriber_email_violation = False
 
-            # Check if name of new subscriber already exists in the db. Capture feedback to relay to end user:
+            # Check if e-mail address of new subscriber already exists in the db. Capture feedback to relay to end user:
             email_in_db = retrieve_from_database("get_subscriber_by_email", email=form.txt_email.data)
             if email_in_db == {}:
                 result = "An error has occurred. Subscriber has not been added."
@@ -478,10 +475,29 @@ def subscribers():
         return render_template("error.html", activity="route: '/subscribers'", details=traceback.format_exc())
 
 
+# Configure route for updating inspiration data from external sources:
+@app.route('/update_inspirational_data')
+@admin_only
+def update_inspirational_data():
+    try:
+        # Perform update of inspiration data in the database.  Capture result of same to relay to user:
+        result, success = get_inspirational_data()
+
+        # Go to the web page to render the results:
+        return render_template("admin_update.html", result=result, recognition_web_template=recognition["web_template"])
+
+    except:  # An error has occurred.
+        # Log error into system log file:
+        update_system_log("route: '/update_inspirational_data'", traceback.format_exc())
+
+        # Go to the web page which displays error details to the user:
+        return render_template("error.html", activity="route: '/update_inspirational_data'", details=traceback.format_exc())
+
+
 # DEFINE FUNCTIONS TO BE USED FOR THIS APPLICATION (LISTED IN ALPHABETICAL ORDER BY FUNCTION NAME):
 # *************************************************************************************************
 def config_database():
-    """Function for configuring the database tables supporting this website"""
+    """Function for configuring the database tables supporting this application"""
     global db, app, Categories, InspirationDataSources, InspirationalQuotes, Subscribers, Users
 
     try:
@@ -538,6 +554,7 @@ def config_database():
         return True
 
     except:  # An error has occurred.
+        # Log error into system log:
         update_system_log("config_database", traceback.format_exc())
 
         # Return failed-execution indication to the calling function:
@@ -545,8 +562,8 @@ def config_database():
 
 
 def config_web_forms():
-    """Function for configuring the web forms supporting this website"""
-    global AdminLoginForm, AdminUpdateForm, ContactForm, AddOrEditSubscriberForm
+    """Function for configuring the web forms supporting this application's website"""
+    global AddOrEditSubscriberForm, AdminLoginForm, AdminUpdateForm, ContactForm
 
     try:
         # CONFIGURE WEB FORMS (LISTED IN ALPHABETICAL ORDER):
@@ -556,13 +573,13 @@ def config_web_forms():
             txt_email = EmailField(label="E-mail Address:", validators=[InputRequired(), Email(), Length(max=50)])
             button_submit = SubmitField(label="Subscribe")
 
-        # Configure "admin_update" form:
+        # Configure "admin login" form:
         class AdminLoginForm(FlaskForm):
             txt_username = StringField(label="Username:", validators=[InputRequired()])
             txt_password = PasswordField(label="Password:", validators=[InputRequired()])
             button_submit = SubmitField(label="Login")
 
-        # Configure "admin_update" form:
+        # Configure "admin update" form:
         class AdminUpdateForm(FlaskForm):
             chk_approaching_asteroids = BooleanField(label="Approaching Asteroids", default=True)
             chk_confirmed_planets = BooleanField(label="Confirmed Planets", default=True)
@@ -582,6 +599,7 @@ def config_web_forms():
         return True
 
     except:  # An error has occurred.
+        # Log error into system log:
         update_system_log("config_web_forms", traceback.format_exc())
 
         # Return failed-execution indication to the calling function:
@@ -589,7 +607,7 @@ def config_web_forms():
 
 
 def email_from_contact_page(form):
-    """Function to process a message that user wishes to e-mail from this website to the website administrator."""
+    """Function to process a message that user wishes to e-mail from this website to the website administrator"""
     try:
         # E-mail the message using the contents of the "Contact Us" web page form as input:
         with smtplib.SMTP(SENDER_HOST, port=SENDER_PORT) as connection:
@@ -616,10 +634,48 @@ def email_from_contact_page(form):
                 return "Your message has been successfully sent."
 
     except:  # An error has occurred.
+        # Log error into system log:
         update_system_log("email_from_contact_page", traceback.format_exc())
 
         # Return failed-execution message to the calling function:
         return "An error has occurred. Your message was not sent."
+
+
+def email_quotes_to_distribution(message, subscribers_list):
+    """Function to e-mail a list of randomly-selected quotes (by category) to subscribers"""
+    global SENDER_EMAIL_GMAIL, SENDER_HOST, SENDER_PASSWORD_GMAIL, SENDER_PORT
+
+    try:
+        # E-mail the message using the 'message' parameter:
+        with smtplib.SMTP(SENDER_HOST, port=SENDER_PORT) as connection:
+            try:
+                # Make connection secure, including encrypting e-mail.
+                connection.starttls()
+            except:
+                # Return failed-execution message to the calling function:
+                return "Error: Could not make connection to send e-mails. Message was not sent."
+            try:
+                # Login to sender's e-mail server.
+                connection.login(SENDER_EMAIL_GMAIL, SENDER_PASSWORD_GMAIL)
+            except:
+                # Return failed-execution message to the calling function:
+                return "Error: Could not log into e-mail server to send e-mails. Message was not sent."
+            else:
+                # Send e-mail.
+                connection.sendmail(
+                    from_addr=SENDER_EMAIL_GMAIL,
+                    to_addrs=subscribers_list,
+                    msg=f"Subject: Inspiration from the 'Inspire Me' website\n\n{message}"
+                )
+                # Return successful-execution message to the calling function::
+                return "Success"
+
+    except:  # An error has occurred.
+        # Log error into system log:
+        update_system_log("email_quotes_to_distribution", traceback.format_exc())
+
+        # Return failed-execution message to the calling function:
+        return "An error has occurred. Message not sent."
 
 
 def find_element(driver, find_type, find_details):
@@ -631,46 +687,52 @@ def find_element(driver, find_type, find_details):
 
 def get_inspirational_data():
     """Function for getting (via web-scraping) inspirational data and storing such information in the database supporting our website"""
+    global dlg
+
     try:
         data_sources_to_update = retrieve_from_database(trans_type="get_non-static_data_sources")
         if data_sources_to_update == {}:
             return "Error: Data could not be updated at this time.", False
         elif data_sources_to_update == []:
-            return "No matching data source records were retrieved.", False
+            pass  # Defer to next set of code to produce user feedback:
 
-        # for i in range(0, len(data_source)):
-        for i in range(0, len(data_sources_to_update)):
-            # Get results of obtaining and processing the desired information for the current inspiration data source (use window dialog to keep user informed):
-            dlg = PBI.PyBusyInfo(f"{data_sources_to_update[i].name}: Update in progress...", title="Administrative Update")
+        # If at least one data source has been flagged for update, perform update.  Otherwise, return appropriate feedback to user:
+        if len(data_sources_to_update) == 0:  # No data sources have been flagged for updating.
+            return "No data sources have been identified for updating.", True
+        else:
+            for i in range(0, len(data_sources_to_update)):
+                # Get results of obtaining and processing the desired information for the current inspiration data source (use window dialog to keep user informed):
+                dlg = wx.App()
+                dlg = PBI.PyBusyInfo(f"{data_sources_to_update[i].name}: Update in progress...", title="Administrative Update")
 
-            # Get the inspirational data from each identified data source.
-            # If the function called returns an empty directory,
-            inspirational_data = get_inspirational_data_details(data_sources_to_update[i].id, data_sources_to_update[i].count, data_sources_to_update[i].name, data_sources_to_update[i].url)
-            if inspirational_data == []:
-                update_system_log("get_inspirational_data", f"Error: Data (for source = '{data_sources_to_update[i].name}') cannot be updated at this time.")
-                return f"Error: Data (for source = {data_sources_to_update[i].name}) cannot be updated at this time.", False
+                # Get the inspirational data from each identified data source.
+                # If the function called returns an empty directory,
+                inspirational_data = get_inspirational_data_details(data_sources_to_update[i].id, data_sources_to_update[i].count, data_sources_to_update[i].name, data_sources_to_update[i].url)
+                if inspirational_data == []:
+                    update_system_log("get_inspirational_data", f"Error: Data (for source = '{data_sources_to_update[i].name}') cannot be updated at this time.")
+                    return f"Error: Data (for source = {data_sources_to_update[i].name}) cannot be updated at this time.", False
 
-            # Delete the existing records in the "inspirational_quotes" database table and update same with the
-            # contents that were obtained via the previous step.  If the function called returns a failed-execution
-            # indication, update system log and return failed-execution indication to the calling function:
-            if not update_database("update_inspirational_quotes", inspirational_data, source=data_sources_to_update[i].id):
-                update_system_log("get_inspirational_data",
-                                  "Error: Database could not be updated. Data cannot be updated at this time.")
-                return "Error: Database could not be updated. Data cannot be updated at this time.", False
+                # Delete the existing records in the "inspirational_quotes" database table and update same with the
+                # contents that were obtained via the previous step.  If the function called returns a failed-execution
+                # indication, update system log and return failed-execution indication to the calling function:
+                if not update_database("update_inspirational_quotes", inspirational_data, source=data_sources_to_update[i].id):
+                    update_system_log("get_inspirational_data",
+                                      "Error: Database could not be updated. Data cannot be updated at this time.")
+                    return "Error: Database could not be updated. Data cannot be updated at this time.", False
 
-            # Deactivate the dialog object:
-            dlg = None
+                # Deactivate the dialog object:
+                dlg = None
 
         # At this point, function is deemed to have executed successfully.  Update system log and return
         # successful-execution indication to the calling function:
         update_system_log("get_inspirational_data", "Successfully updated.")
-        return "", True
-
-        # else:  # An error has occurred in processing constellation data.
-        #     update_system_log("get_constellation_data", "Error: Data cannot be obtained at this time.")
-        #     return "Error: Data cannot be obtained at this time.", False
+        return "Inspirational data has been successfully updated.", True
 
     except:  # An error has occurred.
+        # Clear the wx variable:
+        dlg = None
+
+        # Log error into system log:
         update_system_log("get_inspirational_data", traceback.format_exc())
 
         # Return failed-execution indication to the calling function:
@@ -679,7 +741,6 @@ def get_inspirational_data():
 
 def get_inspirational_data_details(source, count, name, url):
     """Function for getting (via web-scraping) inspirational quotes from identified data sources"""
-    # global data_source
 
     # Define a variable for storing the scraped inspirational data:
     inspirational_data = []
@@ -696,9 +757,11 @@ def get_inspirational_data_details(source, count, name, url):
         # Pause program execution to allow for website loading time:
         time.sleep(WEB_LOADING_TIME_ALLOWANCE)
 
+        # Scrape data source identified via parameter passed to this function:
         if source == 1 or source == 2 or source == 3 or source == 13 or source == 21 or source == 22 or source == 24:
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",'/html/body/div[4]/div[2]/main/article/div/blockquote[' + str(i) + ']/p')
 
                     # Add the quote to the "inspirational_data" list:
@@ -711,6 +774,7 @@ def get_inspirational_data_details(source, count, name, url):
             for i in range(1, 21):
                 for j in range(1, 21):
                     try:
+                        # Scrape element:
                         element_quote = find_element(driver, "xpath",'/html/body/main/article/div[3]/div[2]/div[1]/ul[' + str(i) + ']/li[' + str(j) + ']')
 
                         # Strip unwanted characters:
@@ -727,6 +791,7 @@ def get_inspirational_data_details(source, count, name, url):
             for i in range(1, 21):
                 for j in range(1, 21):
                     try:
+                        # Scrape element:
                         element_quote = find_element(driver, "xpath",'/html/body/main/article/div[3]/div[3]/div[1]/ul[' + str(i) + ']/li[' + str(j) + ']')
 
                         # Strip unwanted characters:
@@ -743,12 +808,12 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 6:
             for i in range(7, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[2]/div/div/div/div[2]/div/article/div/div/div[2]/p[' + str(i) + ']')
 
                     # If item is an inspiration quote, strip it of unwanted characters and add it to the list for subsequent update of the database.
                     element_quote_1 = element_quote.text.strip()
-                    # print(f"regular1: {element_quote_1[0] == '“' or element_quote_1[0] == '"'}: {element_quote_1}")
                     if element_quote_1 == "":
                         pass  # Item will not be added to the database.
                     else:
@@ -763,12 +828,12 @@ def get_inspirational_data_details(source, count, name, url):
 
                 except:
                     try:
+                        # Scrape element:
                         element_quote = find_element(driver, "xpath",
                                                      '/html/body/div[3]/div/div/div/div[2]/div/article/div/div/div[2]/p[' + str(i) + ']')
 
                         # If item is an inspiration quote, strip it of unwanted characters and add it to the list for subsequent update of the database.
                         element_quote_1 = element_quote.text.strip()
-                        # print(f"regular2: {element_quote_1[0] == '“' or element_quote_1[0] == '"'}: {element_quote_1}")
                         if element_quote_1 == "":
                             pass  # Item will not be added to the database.
                         else:
@@ -785,12 +850,12 @@ def get_inspirational_data_details(source, count, name, url):
 
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[2]/div/div/div/div[2]/div/article/div/div/div[2]/blockquote[' + str(i) + ']/p')
 
                     # If item is an inspiration quote, strip it of unwanted characters and add it to the list for subsequent update of the database.
                     element_quote_1 = element_quote.text.strip()
-                    # print(f"block1: {element_quote_1[0] == '“' or element_quote_1[0] == '"'}: {element_quote_1}")
                     if element_quote_1 == "":
                         pass  # Item will not be added to the database.
                     else:
@@ -804,12 +869,12 @@ def get_inspirational_data_details(source, count, name, url):
 
                 except:
                     try:
+                        # Scrape element:
                         element_quote = find_element(driver, "xpath",
                                                      '/html/body/div[3]/div/div/div/div[2]/div/article/div/div/div[2]/blockquote[' + str(i) + ']/p')
 
                         # If item is an inspiration quote, strip it of unwanted characters and add it to the list for subsequent update of the database.
                         element_quote_1 = element_quote.text.strip()
-                        # print(f"block2: {element_quote_1[0] == '“' or element_quote_1[0] == '"'}: {element_quote_1}")
                         if element_quote_1 == "":
                             pass  # Item will not be added to the database.
                         else:
@@ -826,12 +891,12 @@ def get_inspirational_data_details(source, count, name, url):
 
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[2]/div/div/div/div[2]/div/article/div/div/div[2]/div[' + str(i) + ']/div[1]/a')
 
                     # If item is an inspiration quote, strip it of unwanted characters and add it to the list for subsequent update of the database.
                     element_quote_1 = element_quote.text.strip()
-                    # print(f"image1: {element_quote_1[0] == '“' or element_quote_1[0] == '"'}: {element_quote_1}")
                     if element_quote_1 == "":
                         pass  # Item will not be added to the database.
                     else:
@@ -844,13 +909,13 @@ def get_inspirational_data_details(source, count, name, url):
                         inspirational_data.append(element_quote_5)
                 except:
                     try:
+                        # Scrape element:
                         element_quote = find_element(driver, "xpath",
                                                      '/html/body/div[3]/div/div/div/div[2]/div/article/div/div/div[2]/div[' + str(
                                                          i) + ']/div[1]/a')
 
                         # If item is an inspiration quote, strip it of unwanted characters and add it to the list for subsequent update of the database.
                         element_quote_1 = element_quote.text.strip()
-                        # print(f"image2: {element_quote_1[0] == '“' or element_quote_1[0] == '"'}: {element_quote_1}")
                         if element_quote_1 == "":
                             pass  # Item will not be added to the database.
                         else:
@@ -870,6 +935,7 @@ def get_inspirational_data_details(source, count, name, url):
                 for j in range(1, 4):
                     for k in range(1, 16):
                         try:
+                            # Scrape element:
                             element_quote = find_element(driver, "xpath",'/html/body/div[1]/main/div[2]/section[' + str(i) + ']/section[' + str(j) + ']/div/div/div[2]/div/p[' + str(k) + ']')
 
                             # Strip unwanted characters:
@@ -885,14 +951,19 @@ def get_inspirational_data_details(source, count, name, url):
                             continue
 
         elif source == 8:
+            # The website for this data source responds differently than others.  As such, with the standard window height/width used, elements
+            # cannot be found.  Therefore, prior to scraping, maximize driver window so that elements can be found:
+            driver.maximize_window()
+
+            # Proceed with scraping:
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[1]/div[1]/div[1]/div[1]/div[2]/main/article/div/div/div/div/div[3]/div/div[2]/div[1]/blockquote[' + str(i) + ']/p')
 
                     # If item is an inspiration quote, strip it of unwanted characters and add it to the list for subsequent update of the database.
                     element_quote_1 = element_quote.text.strip()
-                    # print(f"block: {element_quote_1[0] == '“' or element_quote_1[0] == '"'}: {element_quote_1}")
                     if element_quote_1 == "":
                         pass  # Item will not be added to the database.
                     else:
@@ -913,6 +984,7 @@ def get_inspirational_data_details(source, count, name, url):
             for i in range(1, 31):
                 for j in range(1, 31):
                     try:
+                        # Scrape element:
                         element_quote = find_element(driver, "xpath",'/html/body/div[2]/main/section/article/div[2]/div[2]/div[1]/div[2]/ol[' + str(i) + ']/li[' + str(j) + ']')
 
                         # Strip unwanted characters:
@@ -929,6 +1001,7 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 10:
             for i in range(1, count + 30):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[2]/div[2]/div[1]/main/article/div/div/p[' + str(i) + ']')
 
@@ -952,6 +1025,7 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 11:
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[1]/div/div[1]/main/article/div/div/ol/li[' + str(i) + ']')
 
@@ -974,6 +1048,7 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 12:
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[1]/div[4]/div/main/div/div/div/div/div/article/div/figure[' + str(i) + ']/figcaption')
 
@@ -996,11 +1071,9 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 14:
             for i in range(7, count + 28):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",'/html/body/div[1]/div[4]/div[1]/div[2]/div/div[1]/p[' + str(i) + ']')
-
                     element_quote_1 = html2text.html2text(element_quote.get_attribute("outerHTML"))
-
-                    # print(element_quote.get_attribute("outerHTML"))
 
                     if not (":" in element_quote_1 and not ("_" in element_quote_1)):
                         pass  # Item will not be added to the database.
@@ -1011,7 +1084,6 @@ def get_inspirational_data_details(source, count, name, url):
                         element_quote_4 = element_quote_3.strip()
 
                         # Add the quote to the "inspirational_data" list:
-                        # print(f"Block 1: {element_quote_4}")
                         inspirational_data.append(element_quote_4)
 
                 except:
@@ -1020,9 +1092,9 @@ def get_inspirational_data_details(source, count, name, url):
             for i in range(1, 21):
                 for j in range(1, 61):
                     try:
+                        # Scrape element:
                         element_quote = find_element(driver, "xpath",
                                                      '/html/body/div[1]/div[4]/div[1]/div[2]/div/div[2]/div[' + str(i) + ']/div/p[' + str(j) + ']')
-
                         element_quote_1 = html2text.html2text(element_quote.get_attribute("outerHTML"))
 
                         element_quote_2 = element_quote_1.replace("*", "")
@@ -1052,18 +1124,13 @@ def get_inspirational_data_details(source, count, name, url):
                                     break
                                 else:
                                     element_quote_8 = element_quote_8.replace(res, "")
-                                    # element_quote_8 = element_quote_8.replace("()", "")
 
                         element_quote_9 = element_quote_8.replace("()", "")
-                        # element_quote_9 = element_quote_8
-
                         element_quote_10 = element_quote_9.strip()
 
                         if element_quote_10 == "" or ":" not in element_quote_10 or len(element_quote_10) == 1:
                             pass  # Item will not be added to the database.
                         else:
-                            # print(f"Block 2: {element_quote_11}")
-
                             # Add the quote to the "inspirational_data" list:
                             inspirational_data.append(element_quote_10)
 
@@ -1073,6 +1140,7 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 15:
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/main/article/div[3]/blockquote[' + str(i) + ']/p')
 
@@ -1085,6 +1153,7 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 16 or source == 17 or source == 18:
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[1]/div/div/div[1]/main/article/div/div/div/div/p[' + str(i) + ']')
 
@@ -1097,7 +1166,6 @@ def get_inspirational_data_details(source, count, name, url):
                     if element_quote_2[0] == '“':
                         element_quote_3 = element_quote_2.replace('“', "")
                         element_quote_4 = element_quote_3.replace('”', "")
-                        # print(element_quote_4)
 
                         # Add the quote to the "inspirational_data" list:
                         inspirational_data.append(element_quote_4)
@@ -1108,6 +1176,7 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 19 or source == 20 or source == 25:
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[1]/div/div/div/main/div/div/div/div/div[2]/div/div[2]/p[' + str(i) + ']')
 
@@ -1124,9 +1193,9 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 23:
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath",
                                                  '/html/body/div[1]/div/main/div/section/article/div[2]/p[' + str(i) + ']')
-
                     element_quote_1 = html2text.html2text(element_quote.get_attribute("outerHTML"))
 
                     if '“' in element_quote_1 and not ("Rufus" in element_quote_1):
@@ -1145,8 +1214,8 @@ def get_inspirational_data_details(source, count, name, url):
         elif source == 26:
             for i in range(1, count + 20):
                 try:
+                    # Scrape element:
                     element_quote = find_element(driver, "xpath", '/html/body/div[1]/main/div[3]/div[1]/div[1]/div[1]/p[' + str(i) + ']')
-
                     element_quote_1a = element_quote.get_attribute("outerHTML")
 
                     # initializing substrings
@@ -1167,13 +1236,8 @@ def get_inspirational_data_details(source, count, name, url):
                         element_quote_1b = element_quote_1a.replace(res, "")
 
                     element_quote_1c = html2text.html2text(element_quote_1b)
-
-                    # print(f"{'\n' in element_quote.get_attribute('outerHTML')}: {element_quote.get_attribute('outerHTML')}")
-
                     element_quote_2 = element_quote_1c.replace("_", "")
                     element_quote_3 = element_quote_2.replace("\n", " ")
-                    # element_quote_4 = element_quote_3.replace("[", "")
-                    # element_quote_5 = element_quote_4.replace("]", "")
                     element_quote_4 = element_quote_3.replace('“', "")
                     element_quote_5 = element_quote_4.replace('”', "")
 
@@ -1216,8 +1280,6 @@ def get_inspirational_data_details(source, count, name, url):
                     else:
                         element_quote_8 = element_quote_6
 
-                    # print(element_quote_8.strip())
-
                     # Add the quote to the "inspirational_data" list:
                     inspirational_data.append(element_quote_8.strip())
 
@@ -1227,9 +1289,6 @@ def get_inspirational_data_details(source, count, name, url):
         else:
             pass
 
-        print(f"List: {inspirational_data}")
-        print(f"Length: {len(inspirational_data)}")
-
         # Close and delete the Selenium driver object:
         driver.close()
         del driver
@@ -1238,6 +1297,7 @@ def get_inspirational_data_details(source, count, name, url):
         return inspirational_data
 
     except:  # An error has occurred.
+        # Log error into system log:
         update_system_log("get_inspirational_data_details", traceback.format_exc())
 
         # Return empty directory as a failed-execution indication to the calling function:
@@ -1256,18 +1316,6 @@ def retrieve_from_database(trans_type, **kwargs):
                 # Retrieve and return all records from the "categories" database table:
                 return db.session.execute(db.select(Categories).order_by(Categories.id)).scalars().all()
 
-            elif trans_type == "get_quotes_for_category":
-                # Capture optional argument:
-                category_id = kwargs.get("category_id", None)
-
-                # Retrieve and return all records in the "inspirational_quotes" database table where the data_source_id is
-                # associated with the category ID passed to this function.  Use an inner join between the
-                # "inspirational_quotes" and "inspiration_data_sources" database tables:
-                dataset_join = db.session.query(InspirationalQuotes, InspirationDataSources).join(InspirationDataSources, InspirationalQuotes.data_source_id == InspirationDataSources.id).filter(InspirationDataSources.category_id == category_id).all()
-
-                # Retrieve and return all records in the join where the category ID matches the ID passed to this function:
-                return dataset_join
-
             elif trans_type == "get_data_sources":
                 # Retrieve and return all existing records, sorted by category and name, from the "inspiration_data_sources" database table
                 # (inner-joined with the "categories" database table):
@@ -1284,6 +1332,18 @@ def retrieve_from_database(trans_type, **kwargs):
                 # Return the count of retrieved records to the calling function:
                 return len(quotes)
 
+            elif trans_type == "get_quotes_for_category":
+                # Capture optional argument:
+                category_id = kwargs.get("category_id", None)
+
+                # Retrieve and return all records in the "inspirational_quotes" database table where the data_source_id is
+                # associated with the category ID passed to this function.  Use an inner join between the
+                # "inspirational_quotes" and "inspiration_data_sources" database tables:
+                dataset_join = db.session.query(InspirationalQuotes, InspirationDataSources).join(InspirationDataSources, InspirationalQuotes.data_source_id == InspirationDataSources.id).filter(InspirationDataSources.category_id == category_id).all()
+
+                # Retrieve and return all records in the join where the category ID matches the ID passed to this function:
+                return dataset_join
+
             elif trans_type == "get_subscriber_by_email":
                 # Capture optional argument:
                 email = kwargs.get("email", None)
@@ -1297,6 +1357,9 @@ def retrieve_from_database(trans_type, **kwargs):
 
                 # Retrieve and return the record for the desired ID:
                 return db.session.execute(db.select(Subscribers).where(Subscribers.id == subscriber_id)).scalar()
+
+            elif trans_type == "get_subscribers":
+                return db.session.execute(db.select(Subscribers).order_by(Subscribers.name)).scalars().all()
 
             elif trans_type == "get_user":
                 # Capture optional argument:
@@ -1312,8 +1375,8 @@ def retrieve_from_database(trans_type, **kwargs):
                 # Retrieve and return record from the database for the desired user ID:
                 return db.session.execute(db.select(Users).where(Users.id == user_id)).scalar()
 
-
     except:  # An error has occurred.
+        # Log error into system log:
         update_system_log("retrieve_from_database (" + trans_type + ")", traceback.format_exc())
 
         # Return empty dictionary as a failed-execution indication to the calling function:
@@ -1349,8 +1412,15 @@ def run_app():
             update_system_log("run_app", "Error: Web forms configuration failed.")
             return False
 
+        # At this point, function is presumed to have executed successfully.  Return
+        # successful-execution indication to the calling function:
+        return True
+
     except:  # An error has occurred.
+        # Log error into system log:
         update_system_log("run_app", traceback.format_exc())
+
+        # Return failed-execution indication to the calling function:
         return False
 
 
@@ -1376,10 +1446,67 @@ def setup_selenium_driver(url, width, height):
         return driver
 
     except:  # An error has occurred.
+        # Log error into system log:
         update_system_log("setup_selenium_driver", traceback.format_exc())
 
         # Return failed-execution indication to the calling function:
         return None
+
+
+def share_quotes_with_distribution():
+    """Function to prepare and e-mail a list of randomly-selected quotes (by category) to subscribers"""
+    try:
+        # Retrieve a list of categories.  If an error occurs or if no records are retrieved, return
+        # failed-execution indication to the calling function:
+        categories = retrieve_from_database("get_categories")
+        if categories == {} or categories == []:
+            return "Could not retrieve categories from database"
+
+        # Prepare message introduction:
+        message_intro = f"INSPIRATIONAL DATA FOR YOU:\n\n"
+
+        # Initialize variable for storing main body of e-mail to be sent to subscribers:
+        message_main_contents = ""
+
+        # For each category retrieved, retrieve all quotes in the database that are assigned said category.
+        # If an error occurs, return failed-execution indication to the calling function:
+        for i in range(0,len(categories)):
+            quotes_in_category = retrieve_from_database("get_quotes_for_category", category_id = categories[i].id)
+            if quotes_in_category == {}:
+                return f"Could not retrieve quotes from database for category '{categories[i].category}'"
+
+            # Select, at random, one quote from the batch of quotes retrieved above:
+            selected_quote = quotes_in_category[random.choice(range(0, len(quotes_in_category)))][0].quote
+
+            # Add that quote (prefixed by the category name) to the main body of e-mail to be sent to subscribers:
+            message_main_contents += f"{categories[i].category.upper()}:\n{selected_quote.encode('ascii', 'ignore').decode('ascii')}\n\n"
+
+        # Combine the message intro and the main body of e-mail, and store in a variable:
+        message_to_send = message_intro + message_main_contents
+
+        # Retrieve a list of subscribers to whom the e-mail shall be sent.  If an error occurs or if
+        # no records are retrieved, return failed-execution indication to the calling function:
+        subscribers_from_db = retrieve_from_database("get_subscribers")
+        if subscribers_from_db == {} or subscribers_from_db == []:
+            return "Could not retrieve subscribers from database"
+
+        # Initialize list variable to gather all subscribers to whom e-mail shall be sent:
+        subscribers_list = []
+
+        # Add each retrieved subscriber to the list of subscribers to whom e-mail shall be sent:
+        for i in range(0,len(subscribers_from_db)):
+            # subscribers += subscribers_from_db[i].email + ","
+            subscribers_list.append(subscribers_from_db[i].email)
+
+        # Send the e-mail and return result of same to the calling function:
+        return email_quotes_to_distribution(message=message_to_send, subscribers_list=subscribers_list)
+
+    except:  # An error has occurred.
+        # Log error into system log:
+        update_system_log("share_quotes_with_distribution", traceback.format_exc())
+
+        # Return failed-execution indication to the calling function:
+        return "Error in function 'share_quotes_with_distribution'"
 
 
 def update_database(trans_type, item_to_process, **kwargs):
@@ -1426,12 +1553,12 @@ def update_database(trans_type, item_to_process, **kwargs):
                 # Capture optional argument:
                 source = kwargs.get("source", None)
 
-                # Delete all records from the "approaching_asteroids" database table for the inspirational data source
+                # Delete all records from the "inspirational_quotes" database table for the inspirational data source
                 # being processed:
                 db.session.execute(db.delete(InspirationalQuotes).where(InspirationalQuotes.data_source_id == source))
                 db.session.commit()
 
-                # Upload, to the "approaching_asteroids" database table, all contents of the "item_to_process" parameter:
+                # Upload, to the "inspirational_quotes" database table, all contents of the "item_to_process" parameter:
                 new_records = []
                 for quote in item_to_process:
                     if quote != "":
@@ -1449,6 +1576,7 @@ def update_database(trans_type, item_to_process, **kwargs):
         return True
 
     except:  # An error has occurred.
+        # Log error into system log:
         update_system_log("update_database (" + trans_type + ")", traceback.format_exc())
 
         # Return failed-execution indication to the calling function:
@@ -1476,14 +1604,8 @@ def update_system_log(activity, log):
                             wx.OK | wx.ICON_INFORMATION)
 
 
-def select_random_quotes():
-    pass
-
-
 # Run main function for this application:
 run_app()
-
-# get_inspirational_data()
 
 # Destroy the object that was created to show user dialog and message boxes:
 dlg.Destroy()
